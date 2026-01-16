@@ -1,0 +1,265 @@
+/* =========================
+   GLOBAL RESET
+   ========================= */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden; /* 🔥 removes scrollbar */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Allow internal scrolling instead */
+main {
+  height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* Hide scrollbar visually */
+main::-webkit-scrollbar {
+  width: 0;
+}
+main {
+  scrollbar-width: none;
+}
+
+/* =========================
+   THEMES
+   ========================= */
+body {
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #ffffff;
+}
+
+body.light {
+  background: #f4f6f8;
+  color: #111;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+header {
+  padding: 16px 12px 10px;
+  text-align: center; /* 🔥 center heading */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.date-row {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-row input {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+body.light .date-row input {
+  background: #e5e5e5;
+  color: #111;
+}
+
+#dayName {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+#themeToggle {
+  border: none;
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+/* =========================
+   PROGRESS RING
+   ========================= */
+.progress-ring {
+  margin: 10px auto 0;
+  width: 80px;
+  height: 80px;
+  position: relative;
+}
+
+.progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+  fill: none;
+  stroke-width: 8;
+}
+
+.progress-ring circle:first-child {
+  stroke: rgba(255,255,255,0.15);
+}
+
+#progress {
+  stroke: #4ade80;
+  stroke-dasharray: 213;
+  stroke-dashoffset: 213;
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+#progressText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+/* =========================
+   CARDS
+   ========================= */
+.card {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 14px;
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+body.light .card {
+  background: #ffffff;
+}
+
+.card h2 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+}
+
+.card p {
+  margin: 0 0 6px 0;
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+.card.done {
+  box-shadow: 0 0 18px rgba(34,197,94,0.4);
+}
+
+.card.partial {
+  box-shadow: 0 0 18px rgba(234,179,8,0.4);
+}
+
+.card.skipped {
+  box-shadow: 0 0 18px rgba(239,68,68,0.4);
+}
+
+/* =========================
+   META / CONTROLS
+   ========================= */
+.meta {
+  margin-top: 8px;
+}
+
+.discomfort-select {
+  width: 100%;
+  border-radius: 10px;
+  border: none;
+  padding: 8px;
+  font-size: 0.85rem;
+  background: rgba(0,0,0,0.25);
+  color: #fff;
+}
+
+body.light .discomfort-select {
+  background: #eee;
+  color: #111;
+}
+
+/* =========================
+   NOTES
+   ========================= */
+.note-wrapper {
+  margin-top: 8px;
+}
+
+.note-header {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.note-box {
+  width: 100%;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: none;
+  padding: 8px;
+  resize: none;
+  background: rgba(0,0,0,0.25);
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+body.light .note-box {
+  background: #eee;
+  color: #111;
+}
+
+/* =========================
+   IMAGE
+   ========================= */
+.image-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.meal-image {
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 12px;
+}
+
+/* =========================
+   REPORTS
+   ========================= */
+.reports {
+  padding: 10px;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+/* =========================
+   LIGHT MODE FIXES
+   ========================= */
+body.light #progress {
+  stroke: #22c55e;
+}
+
+body.light #themeToggle {
+  background: #e0e0e0;
+}

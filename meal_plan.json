@@ -1,0 +1,76 @@
+{
+  "diet_name": "IBS Month 1",
+  "version": "1.0",
+  "meals_per_day": [
+    "Breakfast",
+    "Mid-Morning",
+    "Lunch",
+    "Evening",
+    "Dinner",
+    "Night"
+  ],
+  "week_plan": {
+    "Monday": {
+      "Breakfast": "2 eggs + small rice dosa + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "Chicken 150g + cooked vegetables + rice 150g + 1 tsp ghee",
+      "Evening": "2 egg whites",
+      "Dinner": "Chicken 120g + cooked vegetables",
+      "Night": "Chamomile tea"
+    },
+    "Tuesday": {
+      "Breakfast": "2 eggs + 1/2 cup rice + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "Fish 150g + cooked vegetables + rice 150g",
+      "Evening": "Chicken soup",
+      "Dinner": "Fish 120g + cooked vegetables",
+      "Night": "Chamomile tea"
+    },
+    "Wednesday": {
+      "Breakfast": "2 eggs + small rice dosa + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "2 eggs + cooked vegetables + rice 150g",
+      "Evening": "2 egg whites",
+      "Dinner": "2 eggs + cooked vegetables",
+      "Night": "Chamomile tea"
+    },
+    "Thursday": {
+      "Breakfast": "2 eggs + 1/2 cup rice + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "Chicken 150g + cooked vegetables + rice 150g",
+      "Evening": "Chicken soup",
+      "Dinner": "Chicken 120g + cooked vegetables",
+      "Night": "Chamomile tea"
+    },
+    "Friday": {
+      "Breakfast": "2 eggs + small rice dosa + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "Fish 150g + cooked vegetables + rice 150g",
+      "Evening": "2 egg whites",
+      "Dinner": "Fish 120g + cooked vegetables",
+      "Night": "Chamomile tea"
+    },
+    "Saturday": {
+      "Breakfast": "2 eggs + 1/2 cup rice + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "Paneer 75g + cooked vegetables + rice 100g",
+      "Evening": "6 soaked almonds",
+      "Dinner": "Paneer 50g + cooked vegetables",
+      "Night": "Chamomile tea"
+    },
+    "Sunday": {
+      "Breakfast": "2 eggs + small rice dosa + ginger tea",
+      "Mid-Morning": "Water",
+      "Lunch": "Mutton 100g + cooked vegetables + rice 100g",
+      "Evening": "Chicken soup",
+      "Dinner": "Egg drop soup + cooked vegetables",
+      "Night": "Chamomile tea"
+    }
+  },
+  "rules": {
+    "low_fodmap": true,
+    "no_raw_foods": true,
+    "max_eggs_per_day": 4,
+    "notes": "All vegetables must be well cooked. Avoid spicy food."
+  }
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Meal Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Meal Tracker</h1>
+
+  <div class="date-row">
+    <input type="date" id="dateInput">
+    <span id="dayName"></span>
+    <button id="themeToggle">🌗</button>
+  </div>
+
+  <div class="progress-ring">
+    <svg width="80" height="80">
+      <circle cx="40" cy="40" r="34"></circle>
+      <circle cx="40" cy="40" r="34" id="progress"></circle>
+    </svg>
+    <span id="progressText">0%</span>
+  </div>
+</header>
+
+<main>
+  {% for meal, item in meals %}
+  <div class="card" data-meal="{{ meal }}" data-item="{{ item }}">
+    <h2>{{ meal }}</h2>
+    <p>{{ item }}</p>
+
+    <div class="meta" onclick="event.stopPropagation()">
+      <select class="discomfort-select">
+        <option value="">Discomfort</option>
+        <option>none</option><option>mild</option>
+        <option>moderate</option><option>severe</option>
+      </select>
+
+      <div class="note-wrapper">
+        <div class="note-header" onclick="toggleNote(this)">📝 Add note</div>
+        <textarea class="note-box"></textarea>
+      </div>
+
+      <label class="image-btn">
+        📷 Photo
+        <input type="file" hidden accept="image/*" onchange="uploadImage(this)">
+      </label>
+      <img class="meal-image" hidden>
+    </div>
+  </div>
+  {% endfor %}
+</main>
+
+<section class="reports">
+  <div id="dailyReport"></div>
+  <div id="weeklyReport"></div>
+</section>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
