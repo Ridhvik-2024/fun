@@ -1,278 +1,316 @@
-// =============================
-// GLOBALS
-// =============================
-const STATUS_CYCLE = ["none", "done", "partial", "skipped"];
-let cards;
-let dateInput;
-let dayLabel;
+console.log("🔥 script.js loaded");
 
-// =============================
-// IST DATE HELPERS
-// =============================
+// ==================================================
+// GLOBALS (declared but NOT used until DOM ready)
+// ==================================================
+let cards = [];
+let dateInput = null;
+let dayLabel = null;
+
+const STATUS_CYCLE = ["not_done", "done", "partial"];
+
+// ==================================================
+// DATE HELPERS (IST SAFE)
+// ==================================================
 function getISTDate() {
-    const now = new Date();
-    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-    return new Date(utc + (5.5 * 60 * 60 * 1000));
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 5.5 * 60 * 60 * 1000);
 }
 
-function formatDate(date) {
-    return date.toISOString().split("T")[0];
+function formatDate(d) {
+  return d.toISOString().split("T")[0];
 }
 
 function dayName(dateStr) {
+  try {
     return new Date(dateStr + "T00:00:00")
-        .toLocaleDateString("en-IN", { weekday: "long" });
+      .toLocaleDateString("en-IN", { weekday: "long" });
+  } catch {
+    return "";
+  }
 }
 
-// =============================
-// UI HELPERS
-// =============================
+// ==================================================
+// STATUS + UI
+// ==================================================
 function applyStatus(card, status) {
-    card.dataset.status = status;
-    card.classList.remove("done", "partial", "skipped");
+  if (!card) return;
 
-    if (status !== "none") {
-        card.classList.add(status);
-    }
+  card.dataset.status = status;
+  card.classList.remove("done", "partial", "not_done");
+  card.classList.add(status);
+
+  const badge = card.querySelector(".status-badge");
+  if (badge) {
+    badge.innerText =
+      status === "done" ? "DONE" :
+      status === "partial" ? "PARTIAL" :
+      "NOT DONE";
+  }
 }
 
 function recalcProgress() {
-    let completed = 0;
-    let eligible = 0;
+  let total = 0;
+  let score = 0;
 
-    cards.forEach(card => {
-        const s = card.dataset.status;
-        if (s === "skipped") return;
-        eligible++;
-        if (s === "done" || s === "partial") completed++;
-    });
+  cards.forEach(card => {
+    total++;
+    const s = card.dataset.status;
+    if (s === "done") score += 1;
+    else if (s === "partial") score += 0.5;
+  });
 
-    const percent = eligible === 0
-        ? 0
-        : Math.round((completed / eligible) * 100);
+  const percent = total === 0
+    ? 0
+    : Math.round((score / total) * 100);
 
-    const circle = document.getElementById("progress");
-    const text = document.getElementById("progressText");
+  const circle = document.getElementById("progress");
+  const text = document.getElementById("progressText");
 
-    if (circle) {
-        circle.style.strokeDashoffset =
-            213 - (213 * percent) / 100;
-    }
-    if (text) text.innerText = percent + "%";
-
-    console.log("[DEBUG] Progress:", percent + "%");
+  if (circle) {
+    circle.style.strokeDashoffset = 213 - (213 * percent) / 100;
+  }
+  if (text) {
+    text.innerText = percent + "%";
+  }
 }
 
-// =============================
+// ==================================================
 // NOTES
-// =============================
-function toggleNote(header) {
-    const wrapper = header.closest(".note-wrapper");
-    wrapper.classList.toggle("open");
+// ==================================================
+function toggleNote(el) {
+  const wrapper = el.closest(".note-wrapper");
+  if (!wrapper) return;
 
-    const textarea = wrapper.querySelector(".note-box");
-    if (wrapper.classList.contains("open")) {
-        textarea.focus();
-        textarea.style.height = "auto";
-        textarea.style.height = textarea.scrollHeight + "px";
-    }
+  wrapper.classList.toggle("open");
+
+  const box = wrapper.querySelector(".note-box");
+  if (box && wrapper.classList.contains("open")) {
+    box.focus();
+    box.style.height = "auto";
+    box.style.height = box.scrollHeight + "px";
+  }
 }
 
-// =============================
-// BACKEND CALLS
-// =============================
+// ==================================================
+// MEAL PLAN
+// ==================================================
 function loadMealPlan(dateStr) {
-    fetch(`/plan/${dateStr}`)
-        .then(r => r.json())
-        .then(plan => {
-            cards.forEach(card => {
-                const meal = card.dataset.meal;
-                const el = card.querySelector(".planned-item");
-                if (el) el.innerText = plan[meal] || "";
-            });
-        })
-        .catch(err => console.error("[ERROR] Meal plan:", err));
+  fetch(`/plan/${dateStr}`)
+    .then(r => r.json())
+    .then(plan => {
+      cards.forEach(card => {
+        const meal = card.dataset.meal;
+        const p = card.querySelector(".planned-item");
+        if (p) p.innerText = plan[meal] || "";
+      });
+    })
+    .catch(() => {});
 }
 
+// ==================================================
+// LOGS (LOAD ONLY)
+// ==================================================
 function loadLogsForDate(dateStr) {
-    fetch(`/logs/${dateStr}`)
-        .then(r => r.json())
-        .then(data => {
-            // reset
-            cards.forEach(card => {
-                applyStatus(card, "none");
-                card.querySelector(".note-box").value = "";
-                card.querySelector(".discomfort-select").value = "";
-                const img = card.querySelector(".meal-image");
-                if (img) img.hidden = true;
-            });
+  fetch(`/logs/${dateStr}`)
+    .then(r => r.json())
+    .then(data => {
 
-            data.forEach(entry => {
-                const card = [...cards].find(
-                    c => c.dataset.meal === entry.meal_type
-                );
-                if (!card) return;
+      cards.forEach(card => {
+        applyStatus(card, "not_done");
+        const box = card.querySelector(".note-box");
+        if (box) box.value = "";
+      });
 
-                applyStatus(card, entry.status);
+      data.forEach(entry => {
+        const card = [...cards].find(
+          c => c.dataset.meal === entry.meal_type
+        );
+        if (!card) return;
 
-                if (entry.notes) {
-                    const box = card.querySelector(".note-box");
-                    box.value = entry.notes;
-                    box.style.height = "auto";
-                    box.style.height = box.scrollHeight + "px";
-                }
+        applyStatus(card, entry.status || "not_done");
+        const box = card.querySelector(".note-box");
+        if (box && entry.notes) {
+          box.value = entry.notes;
+          box.style.height = "auto";
+          box.style.height = box.scrollHeight + "px";
+        }
+      });
 
-                if (entry.discomfort) {
-                    card.querySelector(".discomfort-select").value =
-                        entry.discomfort;
-                }
-
-                if (entry.image) {
-                    const img = card.querySelector(".meal-image");
-                    img.src = `/uploads/${entry.image}`;
-                    img.hidden = false;
-                }
-            });
-
-            recalcProgress();
-        })
-        .catch(err => console.error("[ERROR] Logs:", err));
+      recalcProgress();
+    })
+    .catch(() => {});
 }
 
-function sendLog(card, status) {
-    fetch("/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+// ==================================================
+// IMAGES (SAFE)
+// ==================================================
+function loadMealImages(dateStr) {
+  cards.forEach(card => {
+    const meal = card.dataset.meal;
+    const gallery = card.querySelector(".photo-gallery");
+    if (!gallery) return;
+
+    gallery.innerHTML = "";
+
+    fetch(`/images/${dateStr}/${meal}`)
+      .then(r => r.json())
+      .then(images => {
+        images.forEach(img => {
+          const div = document.createElement("div");
+          div.className = "photo-thumb";
+          div.innerHTML = `
+            <img src="/uploads/${img.filename}">
+            <span onclick="deleteImage(${img.id})">✕</span>
+          `;
+          gallery.appendChild(div);
+        });
+      })
+      .catch(() => {});
+  });
+}
+
+function uploadMealImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const card = input.closest(".card");
+  if (!card) return;
+
+  const fd = new FormData();
+  fd.append("image", file);
+  fd.append("date", dateInput.value);
+  fd.append("meal_type", card.dataset.meal);
+
+  fetch("/images/upload", { method: "POST", body: fd })
+    .then(() => loadMealImages(dateInput.value))
+    .catch(() => {});
+}
+
+function deleteImage(id) {
+  fetch(`/images/delete/${id}`, { method: "POST" })
+    .then(() => loadMealImages(dateInput.value))
+    .catch(() => {});
+}
+
+// ==================================================
+// RESET
+// ==================================================
+function resetProgress(scope) {
+  if (!confirm("Reset progress? This cannot be undone.")) return;
+
+  fetch(`/reset/${scope}/${dateInput.value}`, { method: "POST" })
+    .then(() => {
+      cards.forEach(card => {
+        applyStatus(card, "not_done");
+        const box = card.querySelector(".note-box");
+        if (box) box.value = "";
+        const gallery = card.querySelector(".photo-gallery");
+        if (gallery) gallery.innerHTML = "";
+      });
+      recalcProgress();
+    })
+    .catch(() => {});
+}
+
+// ==================================================
+// THEME
+// ==================================================
+function initTheme() {
+  const btn = document.getElementById("themeToggle");
+  if (!btn) return;
+
+  const saved = localStorage.getItem("theme") || "dark";
+  document.body.classList.add(saved);
+
+  btn.addEventListener("click", () => {
+    const next =
+      document.body.classList.contains("light") ? "dark" : "light";
+    document.body.classList.remove("light", "dark");
+    document.body.classList.add(next);
+    localStorage.setItem("theme", next);
+  });
+}
+
+// ==================================================
+// INIT (DOM READY)
+// ==================================================
+document.addEventListener("DOMContentLoaded", () => {
+
+  cards = document.querySelectorAll(".card");
+  dateInput = document.getElementById("dateInput");
+  dayLabel = document.getElementById("dayName");
+
+  if (!dateInput) return;
+
+  const today = formatDate(getISTDate());
+  dateInput.value = today;
+  if (dayLabel) dayLabel.innerText = dayName(today);
+
+  // Card click → status cycle
+  cards.forEach(card => {
+    card.dataset.status = "not_done";
+
+    card.addEventListener("click", () => {
+      const current = card.dataset.status;
+      const next =
+        STATUS_CYCLE[
+          (STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length
+        ];
+      applyStatus(card, next);
+      recalcProgress();
+    });
+  });
+
+  // SAVE BUTTON (ABSOLUTELY SAFE)
+  const saveBtn = document.getElementById("saveBtn");
+  if (saveBtn) {
+    saveBtn.setAttribute("type", "button");
+
+    saveBtn.addEventListener("click", async () => {
+
+      for (const card of cards) {
+        const noteBox = card.querySelector(".note-box");
+        if (!noteBox) continue;
+
+        await fetch("/temp/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             date: dateInput.value,
             meal_type: card.dataset.meal,
-            planned_item: card.dataset.item,
-            status: status,
-            discomfort: card.querySelector(".discomfort-select").value,
-            notes: card.querySelector(".note-box").value
-        })
-    }).catch(err => console.error("[ERROR] Save:", err));
-}
-
-// =============================
-// IMAGE UPLOAD
-// =============================
-function uploadImage(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const card = input.closest(".card");
-    const formData = new FormData();
-
-    formData.append("image", file);
-    formData.append("date", dateInput.value);
-    formData.append("meal_type", card.dataset.meal);
-
-    fetch("/upload", { method: "POST", body: formData })
-        .then(r => r.json())
-        .then(res => {
-            const img = card.querySelector(".meal-image");
-            img.src = `/uploads/${res.filename}`;
-            img.hidden = false;
-            console.log("[DEBUG] Image uploaded:", res.filename);
+            status: card.dataset.status,
+            notes: noteBox.value
+          })
         });
-}
+      }
 
-// =============================
-// REPORTS
-// =============================
-function loadReports(dateStr) {
-    fetch(`/report/day/${dateStr}`)
-        .then(r => r.json())
-        .then(d => {
-            document.getElementById("dailyReport").innerText =
-                `Today: ${d.percent}% (${d.completed}/${d.eligible}, skipped ${d.skipped})`;
-        });
+      await fetch(`/temp/commit/${dateInput.value}`, {
+        method: "POST"
+      });
 
-    fetch(`/report/week/${dateStr}`)
-        .then(r => r.json())
-        .then(w => {
-            document.getElementById("weeklyReport").innerHTML =
-                w.map(x => `${x.date}: ${x.percent}%`).join("<br>");
-        });
-}
-
-// =============================
-// THEME TOGGLE (FIXED)
-// =============================
-function initThemeToggle() {
-    const btn = document.getElementById("themeToggle");
-    if (!btn) return;
-
-    function applyTheme(theme) {
-        document.body.classList.remove("light", "dark");
-        document.body.classList.add(theme);
-        localStorage.setItem("theme", theme);
-        console.log("[DEBUG] Theme:", theme);
-    }
-
-    const saved = localStorage.getItem("theme") || "dark";
-    applyTheme(saved);
-
-    btn.addEventListener("click", () => {
-        const next =
-            document.body.classList.contains("light")
-                ? "dark"
-                : "light";
-        applyTheme(next);
+      alert("Progress saved");
     });
-}
+  }
 
-// =============================
-// INIT (RUN ONCE)
-// =============================
-document.addEventListener("DOMContentLoaded", () => {
-    cards = document.querySelectorAll(".card");
-    dateInput = document.getElementById("dateInput");
-    dayLabel = document.getElementById("dayName");
+  // Date change
+  dateInput.addEventListener("change", () => {
+    if (dayLabel) dayLabel.innerText = dayName(dateInput.value);
+    loadMealPlan(dateInput.value);
+    loadLogsForDate(dateInput.value);
+    loadMealImages(dateInput.value);
+  });
 
-    const today = formatDate(getISTDate());
-    dateInput.value = today;
-    dayLabel.innerText = dayName(today);
+  // Init load
+  loadMealPlan(today);
+  loadLogsForDate(today);
+  loadMealImages(today);
+  initTheme();
+  recalcProgress();
 
-    // date change
-    dateInput.addEventListener("change", () => {
-        const d = dateInput.value;
-        dayLabel.innerText = dayName(d);
+  // OPTIONAL AUTOSAVE (DISABLED FOR MOBILE STABILITY)
+  // setInterval(autosaveTemp, 30000);
 
-        loadMealPlan(d);
-        loadLogsForDate(d);
-        loadReports(d);
-
-        console.log("[DEBUG] Date changed:", d);
-    });
-
-    // card tap
-    cards.forEach(card => {
-        card.dataset.status = "none";
-
-        card.addEventListener("click", () => {
-            const current = card.dataset.status;
-            const next =
-                STATUS_CYCLE[
-                    (STATUS_CYCLE.indexOf(current) + 1) %
-                    STATUS_CYCLE.length
-                ];
-
-            applyStatus(card, next);
-            if (next !== "none") sendLog(card, next);
-            recalcProgress();
-
-            console.log("[DEBUG] Status:", card.dataset.meal, next);
-        });
-    });
-
-    // initial load
-    loadMealPlan(today);
-    loadLogsForDate(today);
-    loadReports(today);
-    initThemeToggle();
-    recalcProgress();
-
-    console.log("[DEBUG] App initialized");
+  console.log("✅ script.js fully executed");
 });
