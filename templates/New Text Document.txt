@@ -1,17 +1,109 @@
-console.log("🔥 script.js loaded");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Meal Analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-// ==================================================
-// GLOBALS (declared but NOT used until DOM ready)
-// ==================================================
-let cards = [];
-let dateInput = null;
-let dayLabel = null;
+  <!-- Shared styles -->
+  <link rel="stylesheet" href="/static/style.css">
 
-const STATUS_CYCLE = ["not_done", "done", "partial"];
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
 
-// ==================================================
-// DATE HELPERS (IST SAFE)
-// ==================================================
+<body class="dark">
+
+<header>
+  <h1>Analytics</h1>
+
+  <div class="date-row">
+    <input type="date" id="dateInput">
+    <span id="dayName"></span>
+  </div>
+
+  <div class="header-actions">
+    <button id="themeToggle" type="button">🌗</button>
+    <a href="/" class="link-btn">⬅ Back</a>
+  </div>
+</header>
+
+<main style="overflow-y:auto; padding:16px 12px 80px;">
+
+  <!-- SUMMARY -->
+  <section class="analytics-summary">
+
+    <div class="analytics-card">
+      <h2>Today</h2>
+      <p class="percent" id="dayPercent">–</p>
+      <small id="dayBreakdown">–</small>
+    </div>
+
+    <div class="analytics-card">
+      <h2>This Week</h2>
+      <p class="percent" id="weekPercent">–</p>
+      <small id="weekBreakdown">–</small>
+    </div>
+
+    <div class="analytics-card">
+      <h2>This Month</h2>
+      <p class="percent" id="monthPercent">–</p>
+      <small id="monthBreakdown">–</small>
+    </div>
+
+  </section>
+
+  <!-- CHARTS -->
+  <section class="charts">
+
+    <div class="chart-block">
+      <h3>Today – Meal Status</h3>
+      <canvas id="dayChart"></canvas>
+    </div>
+
+    <div class="chart-block">
+      <h3>Weekly Completion</h3>
+      <canvas id="weekChart"></canvas>
+    </div>
+
+    <div class="chart-block">
+      <h3>Monthly Distribution</h3>
+      <canvas id="monthChart"></canvas>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ==================================================
+     THEME TOGGLE (INLINE, SELF-CONTAINED)
+     ================================================== -->
+<script>
+(function () {
+  const body = document.body;
+  const btn = document.getElementById("themeToggle");
+
+  if (!btn) return;
+
+  const saved = localStorage.getItem("theme") || "dark";
+  body.classList.remove("light","dark");
+  body.classList.add(saved);
+
+  btn.addEventListener("click", () => {
+    const next =
+      body.classList.contains("light") ? "dark" : "light";
+    body.classList.remove("light","dark");
+    body.classList.add(next);
+    localStorage.setItem("theme", next);
+  });
+})();
+</script>
+
+<!-- ==================================================
+     ANALYTICS LOGIC
+     ================================================== -->
+<script>
+/* ---------- DATE HELPERS (IST) ---------- */
 function getISTDate() {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -22,295 +114,152 @@ function formatDate(d) {
   return d.toISOString().split("T")[0];
 }
 
-function dayName(dateStr) {
+function dayName(d) {
   try {
-    return new Date(dateStr + "T00:00:00")
+    return new Date(d + "T00:00:00")
       .toLocaleDateString("en-IN", { weekday: "long" });
   } catch {
     return "";
   }
 }
 
-// ==================================================
-// STATUS + UI
-// ==================================================
-function applyStatus(card, status) {
-  if (!card) return;
+/* ---------- CHART INSTANCES ---------- */
+let dayChart = null;
+let weekChart = null;
+let monthChart = null;
 
-  card.dataset.status = status;
-  card.classList.remove("done", "partial", "not_done");
-  card.classList.add(status);
-
-  const badge = card.querySelector(".status-badge");
-  if (badge) {
-    badge.innerText =
-      status === "done" ? "DONE" :
-      status === "partial" ? "PARTIAL" :
-      "NOT DONE";
-  }
-}
-
-function recalcProgress() {
-  let total = 0;
-  let score = 0;
-
-  cards.forEach(card => {
-    total++;
-    const s = card.dataset.status;
-    if (s === "done") score += 1;
-    else if (s === "partial") score += 0.5;
+function destroyCharts() {
+  [dayChart, weekChart, monthChart].forEach(c => {
+    if (c) c.destroy();
   });
-
-  const percent = total === 0
-    ? 0
-    : Math.round((score / total) * 100);
-
-  const circle = document.getElementById("progress");
-  const text = document.getElementById("progressText");
-
-  if (circle) {
-    circle.style.strokeDashoffset = 213 - (213 * percent) / 100;
-  }
-  if (text) {
-    text.innerText = percent + "%";
-  }
 }
 
-// ==================================================
-// NOTES
-// ==================================================
-function toggleNote(el) {
-  const wrapper = el.closest(".note-wrapper");
-  if (!wrapper) return;
+/* ---------- RENDER CHARTS ---------- */
+function renderCharts(data) {
+  destroyCharts();
 
-  wrapper.classList.toggle("open");
+  // DAY (DONUT)
+  dayChart = new Chart(
+    document.getElementById("dayChart"),
+    {
+      type: "doughnut",
+      data: {
+        labels: ["Done", "Partial", "Not done"],
+        datasets: [{
+          data: [
+            data.day.done,
+            data.day.partial,
+            data.day.not_done
+          ],
+          backgroundColor: ["#22c55e", "#eab308", "#ef4444"]
+        }]
+      },
+      options: {
+        plugins: { legend: { position: "bottom" } }
+      }
+    }
+  );
 
-  const box = wrapper.querySelector(".note-box");
-  if (box && wrapper.classList.contains("open")) {
-    box.focus();
-    box.style.height = "auto";
-    box.style.height = box.scrollHeight + "px";
-  }
+  // WEEK (LINE)
+  weekChart = new Chart(
+    document.getElementById("weekChart"),
+    {
+      type: "line",
+      data: {
+        labels: data.week.labels.map(d =>
+          new Date(d).toLocaleDateString("en-IN", { weekday: "short" })
+        ),
+        datasets: [{
+          label: "Completion %",
+          data: data.week.percents,
+          borderColor: "#38bdf8",
+          backgroundColor: "rgba(56,189,248,0.2)",
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { callback: v => v + "%" }
+          }
+        }
+      }
+    }
+  );
+
+  // MONTH (BAR)
+  monthChart = new Chart(
+    document.getElementById("monthChart"),
+    {
+      type: "bar",
+      data: {
+        labels: ["Done", "Partial", "Not done"],
+        datasets: [{
+          data: [
+            data.month.done,
+            data.month.partial,
+            data.month.not_done
+          ],
+          backgroundColor: ["#22c55e", "#eab308", "#ef4444"]
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } }
+      }
+    }
+  );
 }
 
-// ==================================================
-// MEAL PLAN
-// ==================================================
-function loadMealPlan(dateStr) {
-  fetch(`/plan/${dateStr}`)
-    .then(r => r.json())
-    .then(plan => {
-      cards.forEach(card => {
-        const meal = card.dataset.meal;
-        const p = card.querySelector(".planned-item");
-        if (p) p.innerText = plan[meal] || "";
-      });
-    })
-    .catch(() => {});
-}
-
-// ==================================================
-// LOGS (LOAD ONLY)
-// ==================================================
-function loadLogsForDate(dateStr) {
-  fetch(`/logs/${dateStr}`)
+/* ---------- LOAD ANALYTICS ---------- */
+function loadAnalytics(dateStr) {
+  fetch(`/analytics/${dateStr}`)
     .then(r => r.json())
     .then(data => {
 
-      cards.forEach(card => {
-        applyStatus(card, "not_done");
-        const box = card.querySelector(".note-box");
-        if (box) box.value = "";
-      });
+      document.getElementById("dayPercent").innerText =
+        data.day.percent + "%";
+      document.getElementById("weekPercent").innerText =
+        Math.round(
+          data.week.percents.reduce((a,b)=>a+b,0) /
+          data.week.percents.length
+        ) + "%";
+      document.getElementById("monthPercent").innerText =
+        data.month.percent + "%";
 
-      data.forEach(entry => {
-        const card = [...cards].find(
-          c => c.dataset.meal === entry.meal_type
-        );
-        if (!card) return;
+      document.getElementById("dayBreakdown").innerText =
+        `Done ${data.day.done}, Partial ${data.day.partial}, Not done ${data.day.not_done}`;
 
-        applyStatus(card, entry.status || "not_done");
-        const box = card.querySelector(".note-box");
-        if (box && entry.notes) {
-          box.value = entry.notes;
-          box.style.height = "auto";
-          box.style.height = box.scrollHeight + "px";
-        }
-      });
+      document.getElementById("weekBreakdown").innerText =
+        "Average of this week";
 
-      recalcProgress();
+      document.getElementById("monthBreakdown").innerText =
+        `Done ${data.month.done}, Partial ${data.month.partial}, Not done ${data.month.not_done}`;
+
+      renderCharts(data);
     })
-    .catch(() => {});
-}
-
-// ==================================================
-// IMAGES (SAFE)
-// ==================================================
-function loadMealImages(dateStr) {
-  cards.forEach(card => {
-    const meal = card.dataset.meal;
-    const gallery = card.querySelector(".photo-gallery");
-    if (!gallery) return;
-
-    gallery.innerHTML = "";
-
-    fetch(`/images/${dateStr}/${meal}`)
-      .then(r => r.json())
-      .then(images => {
-        images.forEach(img => {
-          const div = document.createElement("div");
-          div.className = "photo-thumb";
-          div.innerHTML = `
-            <img src="/uploads/${img.filename}">
-            <span onclick="deleteImage(${img.id})">✕</span>
-          `;
-          gallery.appendChild(div);
-        });
-      })
-      .catch(() => {});
-  });
-}
-
-function uploadMealImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-
-  const card = input.closest(".card");
-  if (!card) return;
-
-  const fd = new FormData();
-  fd.append("image", file);
-  fd.append("date", dateInput.value);
-  fd.append("meal_type", card.dataset.meal);
-
-  fetch("/images/upload", { method: "POST", body: fd })
-    .then(() => loadMealImages(dateInput.value))
-    .catch(() => {});
-}
-
-function deleteImage(id) {
-  fetch(`/images/delete/${id}`, { method: "POST" })
-    .then(() => loadMealImages(dateInput.value))
-    .catch(() => {});
-}
-
-// ==================================================
-// RESET
-// ==================================================
-function resetProgress(scope) {
-  if (!confirm("Reset progress? This cannot be undone.")) return;
-
-  fetch(`/reset/${scope}/${dateInput.value}`, { method: "POST" })
-    .then(() => {
-      cards.forEach(card => {
-        applyStatus(card, "not_done");
-        const box = card.querySelector(".note-box");
-        if (box) box.value = "";
-        const gallery = card.querySelector(".photo-gallery");
-        if (gallery) gallery.innerHTML = "";
-      });
-      recalcProgress();
-    })
-    .catch(() => {});
-}
-
-// ==================================================
-// THEME
-// ==================================================
-function initTheme() {
-  const btn = document.getElementById("themeToggle");
-  if (!btn) return;
-
-  const saved = localStorage.getItem("theme") || "dark";
-  document.body.classList.add(saved);
-
-  btn.addEventListener("click", () => {
-    const next =
-      document.body.classList.contains("light") ? "dark" : "light";
-    document.body.classList.remove("light", "dark");
-    document.body.classList.add(next);
-    localStorage.setItem("theme", next);
-  });
-}
-
-// ==================================================
-// INIT (DOM READY)
-// ==================================================
-document.addEventListener("DOMContentLoaded", () => {
-
-  cards = document.querySelectorAll(".card");
-  dateInput = document.getElementById("dateInput");
-  dayLabel = document.getElementById("dayName");
-
-  if (!dateInput) return;
-
-  const today = formatDate(getISTDate());
-  dateInput.value = today;
-  if (dayLabel) dayLabel.innerText = dayName(today);
-
-  // Card click → status cycle
-  cards.forEach(card => {
-    card.dataset.status = "not_done";
-
-    card.addEventListener("click", () => {
-      const current = card.dataset.status;
-      const next =
-        STATUS_CYCLE[
-          (STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length
-        ];
-      applyStatus(card, next);
-      recalcProgress();
+    .catch(() => {
+      alert("Failed to load analytics");
     });
-  });
+}
 
-  // SAVE BUTTON (ABSOLUTELY SAFE)
-  const saveBtn = document.getElementById("saveBtn");
-  if (saveBtn) {
-    saveBtn.setAttribute("type", "button");
+/* ---------- INIT ---------- */
+const dateInput = document.getElementById("dateInput");
+const dayLabel = document.getElementById("dayName");
 
-    saveBtn.addEventListener("click", async () => {
+const today = formatDate(getISTDate());
+dateInput.value = today;
+dayLabel.innerText = dayName(today);
 
-      for (const card of cards) {
-        const noteBox = card.querySelector(".note-box");
-        if (!noteBox) continue;
+loadAnalytics(today);
 
-        await fetch("/temp/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: dateInput.value,
-            meal_type: card.dataset.meal,
-            status: card.dataset.status,
-            notes: noteBox.value
-          })
-        });
-      }
-
-      await fetch(`/temp/commit/${dateInput.value}`, {
-        method: "POST"
-      });
-
-      alert("Progress saved");
-    });
-  }
-
-  // Date change
-  dateInput.addEventListener("change", () => {
-    if (dayLabel) dayLabel.innerText = dayName(dateInput.value);
-    loadMealPlan(dateInput.value);
-    loadLogsForDate(dateInput.value);
-    loadMealImages(dateInput.value);
-  });
-
-  // Init load
-  loadMealPlan(today);
-  loadLogsForDate(today);
-  loadMealImages(today);
-  initTheme();
-  recalcProgress();
-
-  // OPTIONAL AUTOSAVE (DISABLED FOR MOBILE STABILITY)
-  // setInterval(autosaveTemp, 30000);
-
-  console.log("✅ script.js fully executed");
+dateInput.addEventListener("change", () => {
+  dayLabel.innerText = dayName(dateInput.value);
+  loadAnalytics(dateInput.value);
 });
+</script>
+
+</body>
+</html>
